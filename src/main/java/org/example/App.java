@@ -23,6 +23,7 @@ public class App {
     public static void main(String[] args) {
         if (args.length < 3) {
             System.out.println("USAGE: java -jar bulkrequest.jar <repeat> <username> <password>");
+            System.exit(0);
         }
         log.info("Running {} requests", args[0]);
 
@@ -35,19 +36,18 @@ public class App {
                 long endTime = System.currentTimeMillis();
                 log.info("Time: {} ms ({} s)", (endTime - startTime), ((endTime - startTime) / 1000.0));
                 if (((endTime - startTime) / 1000.0) > 5) {
-                    log.warn("!!!!!!!!!!!!!!!");
-                    log.warn("LONG DURATION {} s", ((endTime - startTime) / 1000.0));
-                    log.warn("!!!!!!!!!!!!!!!");
+                    log.warn("LONG DURATION request {} of {} took {} s", i, args[0], ((endTime - startTime) / 1000.0));
                 }
             } catch (Exception e) {
                 log.error("Request error", e);
             }
-            System.out.println();
+
+            log.info("");
         }
     }
 
     public static void evaluateVisibleProjectsOfCurrentUser(String username, String password) {
-        log.info("Getting token for swc user");
+        log.debug("Getting token for swc user");
 
         Keycloak kc = KeycloakBuilder.builder()
                 .username(username)
@@ -65,18 +65,18 @@ public class App {
         AuthorizationRequest authorizationRequest = new AuthorizationRequest();
         authorizationRequest.setScope(Permission.PROJECT_VIEW.getAuthorizationScope());
 
-        log.info("Exchanging access token for authorization");
+        log.debug("Exchanging access token for authorization");
         AuthorizationResponse authorizationResponse = authzClient.authorization(accessToken)
                 .authorize(authorizationRequest);
         String rpt = authorizationResponse.getToken();
 
-        log.info("Introspecting authorization ticket");
+        log.debug("Introspecting authorization ticket");
         TokenIntrospectionResponse requestingPartyToken = authzClient.protection().introspectRequestingPartyToken(rpt);
         List<String> projects = requestingPartyToken.getPermissions().stream()
                 .filter(permission -> permission.getScopes().contains(Permission.PROJECT_VIEW.getAuthorizationScope()))
                 .map(permission -> permission.getResourceName())
                 .collect(toList());
 
-        log.info("Access to {}", projects);
+        log.debug("Access to {}", projects);
     }
 }
