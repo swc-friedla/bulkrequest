@@ -43,6 +43,7 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
+                    <finalName>kcbulk</finalName>
                     <transformers>
                         <transformer
                             implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>

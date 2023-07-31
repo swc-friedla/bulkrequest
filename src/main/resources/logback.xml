@@ -5,14 +5,14 @@
     <import class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"/>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>bulkrequest.log</file>
+        <file>kcbulk.log</file>
         <append>false</append>
         <encoder class="PatternLayoutEncoder">
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%kvp- %msg%n</pattern>
         </encoder>
     </appender>
 
-    <logger name="org.example" level="debug">
+    <logger name="org.example" level="info">
         <appender-ref ref="FILE"/>
     </logger>
 

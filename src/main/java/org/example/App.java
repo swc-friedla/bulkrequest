@@ -2,7 +2,18 @@ package org.example;
 
 import static java.util.stream.Collectors.toList;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.ProxySelector;
+import java.net.URL;
+import java.time.Duration;
 import java.util.List;
+
+import javax.ws.rs.core.Request;
 
 import org.example.permissions.Permission;
 import org.keycloak.admin.client.Keycloak;
@@ -21,29 +32,46 @@ public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
-        if (args.length < 3) {
-            System.out.println("USAGE: java -jar bulkrequest.jar <repeat> <username> <password>");
+        if (args.length != 3) {
+            System.out.println("USAGE: java -jar kcbulk.jar <repeat> <username> <password>");
             System.exit(0);
         }
         log.info("Running {} requests", args[0]);
 
         for (Integer i = 0; i < Integer.valueOf(args[0]); i++) {
-            log.info("**** Running request {} of {} ****", i, args[0]);
+            log.info("**** Running request {} of {} ****", i+1, args[0]);
 
+            long endTime = 0;
+            long startTime = 0;
             try {
-                long startTime = System.currentTimeMillis();
+                startTime = System.currentTimeMillis();
                 evaluateVisibleProjectsOfCurrentUser(args[1], args[2]);
-                long endTime = System.currentTimeMillis();
+                //evaluateSvg();
+                endTime = System.currentTimeMillis();
                 log.info("Time: {} ms ({} s)", (endTime - startTime), ((endTime - startTime) / 1000.0));
                 if (((endTime - startTime) / 1000.0) > 5) {
                     log.warn("LONG DURATION request {} of {} took {} s", i, args[0], ((endTime - startTime) / 1000.0));
                 }
             } catch (Exception e) {
-                log.error("Request error", e);
+                endTime = System.currentTimeMillis();
+                log.error("Request error for request {} of {} after {} s", i, args[0], ((endTime - startTime) / 1000.0), e);
             }
 
             log.info("");
         }
+    }
+
+    public static void evaluateSvg() throws IOException {
+        URL url = new URL("https://ey-test.poolparty.biz/PoolParty/images/svg/pp_icon_messages_error28x28.svg");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
+        con.setDoOutput(true);
+        con.setConnectTimeout(150*1000);
+        con.setReadTimeout(150*1000);
+
+        DataOutputStream out = new DataOutputStream(con.getOutputStream());
+        out.flush();
+        out.close();
     }
 
     public static void evaluateVisibleProjectsOfCurrentUser(String username, String password) {
@@ -55,7 +83,7 @@ public class App {
                 .clientId("ppt")
                 .clientSecret("748c4aeb-832e-4734-9902-ba1ff4e539c9")
                 .realm("ey-test.poolparty.biz")
-                .serverUrl("https://drpp-kc.ey.net/auth/")
+                .serverUrl("https://login-eu.poolparty.biz/auth/")
                 .build();
 
         String accessToken = kc.tokenManager().getAccessTokenString();
