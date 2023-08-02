@@ -12,6 +12,7 @@ import java.net.ProxySelector;
 import java.net.URL;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Request;
 
@@ -19,6 +20,7 @@ import org.example.permissions.Permission;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.authorization.client.AuthzClient;
+import org.keycloak.authorization.client.Configuration;
 import org.keycloak.authorization.client.representation.TokenIntrospectionResponse;
 import org.keycloak.representations.idm.authorization.AuthorizationRequest;
 import org.keycloak.representations.idm.authorization.AuthorizationResponse;
@@ -32,20 +34,20 @@ public class App {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
-        if (args.length != 3) {
-            System.out.println("USAGE: java -jar kcbulk.jar <repeat> <username> <password>");
+        if (args.length != 4) {
+            System.out.println("USAGE: java -jar kcbulk.jar <repeat> <username> <password> <server-url>");
             System.exit(0);
         }
         log.info("Running {} requests", args[0]);
 
         for (Integer i = 0; i < Integer.valueOf(args[0]); i++) {
-            log.info("**** Running request {} of {} ****", i+1, args[0]);
+            log.info("**** Running request {} of {} ****", i + 1, args[0]);
 
             long endTime = 0;
             long startTime = 0;
             try {
                 startTime = System.currentTimeMillis();
-                evaluateVisibleProjectsOfCurrentUser(args[1], args[2]);
+                evaluateVisibleProjectsOfCurrentUser(args[1], args[2], args[3]);
                 //evaluateSvg();
                 endTime = System.currentTimeMillis();
                 log.info("Time: {} ms ({} s)", (endTime - startTime), ((endTime - startTime) / 1000.0));
@@ -54,7 +56,13 @@ public class App {
                 }
             } catch (Exception e) {
                 endTime = System.currentTimeMillis();
-                log.error("Request error for request {} of {} after {} s", i, args[0], ((endTime - startTime) / 1000.0), e);
+                log.error(
+                        "Request error for request {} of {} after {} s",
+                        i,
+                        args[0],
+                        ((endTime - startTime) / 1000.0),
+                        e
+                );
             }
 
             log.info("");
@@ -66,15 +74,15 @@ public class App {
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("GET");
         con.setDoOutput(true);
-        con.setConnectTimeout(150*1000);
-        con.setReadTimeout(150*1000);
+        con.setConnectTimeout(150 * 1000);
+        con.setReadTimeout(150 * 1000);
 
         DataOutputStream out = new DataOutputStream(con.getOutputStream());
         out.flush();
         out.close();
     }
 
-    public static void evaluateVisibleProjectsOfCurrentUser(String username, String password) {
+    public static void evaluateVisibleProjectsOfCurrentUser(String username, String password, String serverUrl) {
         log.debug("Getting token for swc user");
 
         Keycloak kc = KeycloakBuilder.builder()
@@ -83,12 +91,20 @@ public class App {
                 .clientId("ppt")
                 .clientSecret("748c4aeb-832e-4734-9902-ba1ff4e539c9")
                 .realm("ey-test.poolparty.biz")
-                .serverUrl("https://login-eu.poolparty.biz/auth/")
+                .serverUrl(serverUrl)
                 .build();
 
         String accessToken = kc.tokenManager().getAccessTokenString();
 
-        AuthzClient authzClient = AuthzClient.create(App.class.getResourceAsStream("/ppt-keycloak.json"));
+        Configuration authzConfiguration = new Configuration(
+                serverUrl,
+                "ey-test.poolparty.biz",
+                "ppt",
+                Map.of("secret", "748c4aeb-832e-4734-9902-ba1ff4e539c9"),
+                null
+        );
+
+        AuthzClient authzClient = AuthzClient.create(authzConfiguration);
 
         AuthorizationRequest authorizationRequest = new AuthorizationRequest();
         authorizationRequest.setScope(Permission.PROJECT_VIEW.getAuthorizationScope());
